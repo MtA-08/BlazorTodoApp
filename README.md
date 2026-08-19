@@ -1,7 +1,9 @@
 ﻿# BlazorTodoApp
 ## 📱 Blazor To-Do & Reminder App
 
-Willkommen zu meiner To-Do-App! Dieses Projekt ist eine einfache und praktische Web-Anwendung, mit der man alltägliche Aufgaben verwalten und individuelle Erinnerungen (inklusive Wochentage und Uhrzeiten) festlegen kann. 
+**[🔗 Hier geht's zur Live-App! (Bitte am PC die mobile Ansicht nutzen)](https://DEIN-BENUTZERNAME.github.io/BlazorTodoApp/)**
+
+Willkommen zu meiner To-Do-App... 
 
 ### Wichtiger Hinweis zur Ansicht (Mobile First)
 
