@@ -3,7 +3,7 @@
 
 Willkommen zu meiner To-Do-App! Dieses Projekt ist eine einfache und praktische Web-Anwendung, mit der man alltägliche Aufgaben verwalten und individuelle Erinnerungen (inklusive Wochentage und Uhrzeiten) festlegen kann. 
 
-### ⚠️ Wichtiger Hinweis zur Ansicht (Mobile First)
+### Wichtiger Hinweis zur Ansicht (Mobile First)
 
 Diese Anwendung wurde **speziell für mobile Endgeräte** entwickelt und das Layout ist aktuell *ausschließlich* für Smartphones optimiert. 
 
@@ -12,7 +12,7 @@ Wenn du diese App an einem Desktop-PC oder Laptop im Browser öffnest, wechsle b
 * **Chrome / Edge / Firefox (Windows):** Drücke `Strg + Shift + M` (oder `F12`, um die Entwicklertools zu öffnen, und klicke auf das kleine Smartphone-Symbol).
 * **Safari (Mac):** Drücke `Cmd + Ctrl + M` (vorausgesetzt, das Entwicklermenü ist aktiviert).
 
-### ✨ Aktuelle Features
+### Aktuelle Features
 * Erstellen, Bearbeiten und Löschen von To-Do's.
 * Benutzerdefinierte Erinnerungen hinzufügen.
 * App-ähnliches Design für eine flüssige Bedienung auf dem Handy.
