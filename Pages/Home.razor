@@ -44,6 +44,8 @@
     }
 </div>
 
+
+<!-- Add task Overlay -->
 @if (isModalVisible)
 {
     <div class="modal-overlay">
@@ -80,6 +82,7 @@
     </div>
 }
 
+<!-- Optionen bearbeiten und löschen Overlay -->
 @if (isOptionsMenuVisible)
 {
     <div class="modal-overlay" @onclick="CloseOptionsMenu">
@@ -92,6 +95,7 @@
     </div>
 }
 
+<!-- Erinnerung Menü Overlay-->
 @if (isReminderMenuVisible)
 {
     <div class="modal-overlay">
@@ -143,7 +147,7 @@
     </div>
 }
 
-
+<!-- Erinnerung Zeit wähler Overlay -->
 @if (selectedReminder != null)
 {
     <div class="modal-overlay">
