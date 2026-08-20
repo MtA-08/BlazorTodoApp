@@ -1,7 +1,7 @@
 ﻿# BlazorTodoApp
 ## 📱 Blazor To-Do & Reminder App
 
-**[🔗 Hier geht's zur Live-App! (Bitte am PC die mobile Ansicht nutzen)](https://DEIN-BENUTZERNAME.github.io/BlazorTodoApp/)**
+**[🔗 Hier geht's zur Live-App! (Bitte am PC die mobile Ansicht nutzen)](https://mta-08.github.io/BlazorTodoApp/)**
 
 Willkommen zu meiner To-Do-App... 
 
