@@ -197,7 +197,7 @@
     width: 90vw;
     height: 40px;
     background-color: #1d4f30;
-    border: 2px solid #193f29;
+    border: 1px solid #193f29;
     border-radius: 10px;
     margin: 5px;
     cursor: pointer; 
@@ -243,10 +243,11 @@
     border-radius: 10px;
     font-size: 15px;
     background-color: #0f0f0f;
-    border: 2px solid #1e1e1e;
+    border: 1px solid #1e1e1e;
     height: 42px;
     color: white;
     padding: 10px;
+    cursor: pointer;
 }
 
 .save-btn[b-kob6kijb82] {
@@ -254,7 +255,7 @@
     padding: 10px;
     display: inline-block;
     background-color: #1d4f30;
-    border: 2px solid #193f29;
+    border: 1px solid #193f29;
     border-radius: 10px;
     color: #d3d3d3;
     text-align: center;
@@ -273,7 +274,7 @@
     border-radius: 10px;
     font-size: 20px;
     background-color: #0f0f0f;
-    border: 2px solid #1e1e1e;
+    border: 1px solid #1e1e1e;
     height: 42px;
     color: white;
     padding: 10px;
@@ -316,7 +317,7 @@
     align-items: center;
     width: 100%;
     background-color: #08080A;
-    border: 2px solid #2c2c2f;
+    border: 1px solid #2c2c2f;
     border-radius: 10px;
     margin: 5px;
     cursor: pointer;
@@ -326,7 +327,7 @@
 
 .set-reminder-menu[b-kob6kijb82] {
     background-color: #08080A;
-    border: 2px solid #2c2c2f;
+    border: 1px solid #2c2c2f;
     border-radius: 10px;
     justify-content: center;
     align-items: center;
@@ -341,7 +342,7 @@
 }
 
     .reminder-menu-day-picker p[b-kob6kijb82] {
-        border: 2px solid #2c2c2f;
+        border: 1px solid #2c2c2f;
         padding: 7px;
         margin: 2px;
         border-radius: 10px;
@@ -352,7 +353,7 @@
     }
 
     .selected-day[b-kob6kijb82] {
-        border: 2px solid #2c2c2f;
+        border: 1px solid #2c2c2f;
         padding: 7px;
         margin: 2px;
         border-radius: 10px;
@@ -368,7 +369,7 @@
     justify-content: center;
     align-items: center;
     background-color: #08080A;
-    border: 2px solid #2c2c2f;
+    border: 1px solid #2c2c2f;
     border-radius: 10px;
     margin: 5px;
     cursor: pointer;
@@ -381,7 +382,7 @@
     justify-content: center;
     align-items: center;
     background-color: #08080A;
-    border: 2px solid #2c2c2f;
+    border: 1px solid #2c2c2f;
     border-radius: 10px;
     margin: 5px;
     cursor: pointer;
@@ -419,7 +420,7 @@
     justify-content: center;
     align-items: center;
     background-color: #08080A;
-    border: 2px solid #2c2c2f;
+    border: 1px solid #2c2c2f;
     border-radius: 10px;
     margin: 5px;
     padding: 5px;
@@ -427,6 +428,35 @@
     padding: 5px;
     user-select: none;
     color: white;
+}
+
+/* Uhrzeit wähler */
+
+.wheel-container[b-kob6kijb82] {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    height: 160px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Aktuell ausgewählte zeit zentrieren */
+.time-input[b-kob6kijb82] {
+    font-size: 2rem;
+    padding: 10px;
+    text-align: center;
+    border-radius: 8px;
+    border: 1px solid #2c2c2f;
+    background-color: #08080A;
+    color: white;
+}
+
+input[type="time"][b-kob6kijb82]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    transform: scale(1.5);
+    cursor: pointer;
 }
 
 /**/
