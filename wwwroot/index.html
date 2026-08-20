@@ -3,7 +3,20 @@
 
 <head>
     <title>App</title>
-    <base href="/BlazorTodoApp/" />
+    <script>
+        (function () {
+            var base = document.createElement('base');
+            // If running on localhost or 127.0.0.1, use '/'
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                base.href = '/';
+            } else {
+                // Extracts '/BlazorTodoApp/' automatically on GitHub Pages
+                var path = window.location.pathname.split('/')[1];
+                base.href = path ? '/' + path + '/' : '/';
+            }
+            document.getElementsByTagName('head')[0].appendChild(base);
+        })();
+    </script>
     <link rel="preload" id="webassembly" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" href="favicon.png" />
