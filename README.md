@@ -1,6 +1,6 @@
 ﻿# BlazorTodoApp
 ## 📱 Blazor To-Do & Reminder App
-## Dieser App befindet sich noch im aktiven Entwicklung, daher funktionieren manche Funktion nicht.
+### Dieser App befindet sich noch im aktiven Entwicklung, daher funktionieren manche Funktion nicht.Bitte beim Nutzung Rücksicht nehmen.
 
 **[🔗 Hier geht's zur Live-App! (Bitte am PC die mobile Ansicht nutzen)](https://mta-08.github.io/BlazorTodoApp/)**
 
