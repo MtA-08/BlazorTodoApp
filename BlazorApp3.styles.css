@@ -94,6 +94,15 @@
     }
 }
 /* /Pages/Home.razor.rz.scp.css */
+button[b-kob6kijb82], a[b-kob6kijb82], input[b-kob6kijb82], select[b-kob6kijb82], textarea[b-kob6kijb82], div[b-kob6kijb82] {
+    -webkit-tap-highlight-color: transparent;
+}
+
+input:focus[b-kob6kijb82] {
+    outline: 2px solid #0066cc;
+    outline-offset: 2px;
+}
+
 /* TASK CARD*/
 .task-card-grid[b-kob6kijb82] {
     display: grid;
@@ -279,12 +288,6 @@
     color: white;
     padding: 10px;
 }
-
-    .text-input-field:focus[b-kob6kijb82] {
-        outline: none;
-        box-shadow: none;
-        border-color: #1e1e1e;
-    }
 
 .input-group[b-kob6kijb82]{
     display: flex;
