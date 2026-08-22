@@ -1,3 +1,12 @@
+button, a, input, select, textarea, div {
+    -webkit-tap-highlight-color: transparent;
+}
+
+input:focus {
+    outline: 2px solid #0066cc;
+    outline-offset: 2px;
+}
+
 /* TASK CARD*/
 .task-card-grid {
     display: grid;
@@ -183,12 +192,6 @@
     color: white;
     padding: 10px;
 }
-
-    .text-input-field:focus {
-        outline: none;
-        box-shadow: none;
-        border-color: #1e1e1e;
-    }
 
 .input-group{
     display: flex;
