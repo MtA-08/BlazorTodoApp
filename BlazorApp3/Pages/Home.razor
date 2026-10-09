@@ -118,8 +118,7 @@
             </div>
 
             <div class="sheet-content">
-                @if (notificationsEnabled)
-                {
+                
                     @foreach (var reminder in newTask.Reminders)
                     {
                         <div class="set-reminder-card">
@@ -159,16 +158,6 @@
                         <img src="plus.svg" width="18" alt="Plus" />
                         <span>Erinnerung hinzufügen</span>
                     </button>
-                }
-                else
-                {
-                    <div class="notification-permission-card">
-                        <p>Benachrichtigungen sind zurzeit deaktiviert.</p>
-                        <button class="ask-permission-button" @onclick="RequestNotificationPermission">
-                            Benachrichtigungen erlauben
-                        </button>
-                    </div>
-                }
             </div>
 
             <div class="sheet-footer">
