@@ -2,32 +2,33 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: '8.0.x' # Make sure this matches your .NET version
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
-    - name: Publish App
-      run: dotnet publish -c Release -o release --nologo
-    
-    # Blazor needs this so GitHub Pages doesn't ignore files starting with underscores
-    - name: Add .nojekyll file
-      run: touch release/wwwroot/.nojekyll
+      - name: Publish App
+        run: dotnet publish BlazorApp3/BlazorApp3.csproj -c Release -o release --nologo
 
-    - name: Deploy to GitHub Pages
-      uses: JamesIves/github-pages-deploy-action@v4
-      with:
-        folder: release/wwwroot
-        
-    - uses: actions/checkout@v4   # Changed from v3
+      - name: Add .nojekyll file
+        run: touch release/wwwroot/.nojekyll
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4 # Changed from v3
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: release/wwwroot
