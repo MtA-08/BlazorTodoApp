@@ -6,6 +6,18 @@
     font-family: Arial, sans-serif;
 }
 
+/* Schützt den generellen Inhalt der App */
+body, .main-layout {
+    /* Padding oben für die Statusleiste (Uhrzeit, Akku, Benachrichtigungen) */
+    padding-top: env(safe-area-inset-top);
+    /* Padding unten für die Navigationsleiste (Home-Balken, Zurück-Taste) */
+    padding-bottom: env(safe-area-inset-bottom);
+    /* Optional: Für Handys im Querformat */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+}
+
+
 .loading-progress {
     position: absolute;
     display: block;
@@ -15,19 +27,19 @@
     margin: 0 auto 0 auto;
 }
 
-.loading-progress circle {
-    fill: none;
-    stroke: #eFeFe0;
-    stroke-width: 0.6rem;
-    transform-origin: 50% 50%;
-    transform: rotate(-90deg);
-}
+    .loading-progress circle {
+        fill: none;
+        stroke: #eFeFe0;
+        stroke-width: 0.6rem;
+        transform-origin: 50% 50%;
+        transform: rotate(-90deg);
+    }
 
-.loading-progress circle:last-child {
-    stroke: #1b6ec2;
-    stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
-    transition: stroke-dasharray 0.05s ease-in-out;
-}
+        .loading-progress circle:last-child {
+            stroke: #1b6ec2;
+            stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
+            transition: stroke-dasharray 0.05s ease-in-out;
+        }
 
 .loading-progress-text {
     color: aliceblue;
@@ -37,9 +49,9 @@
     inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
 }
 
-.loading-progress-text:after {
-    content: var(--blazor-load-percentage-text, "Loading");
-}
+    .loading-progress-text:after {
+        content: var(--blazor-load-percentage-text, "Loading");
+    }
 
 #blazor-error-ui {
     color-scheme: light only;
@@ -68,9 +80,9 @@
     color: white;
 }
 
-.blazor-error-boundary::after {
-    content: "An error has occurred."
-}
+    .blazor-error-boundary::after {
+        content: "An error has occurred."
+    }
 
 body {
     background-color: #131215;
