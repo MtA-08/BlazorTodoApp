@@ -1,4 +1,4 @@
-﻿# BlazorTodoApp
+﻿# BlazorTodoApp | DER ENTWICKLUNG DIESER APP WURDE ZUR EINE ANDERE ENTWICKLUNGSPLATFORM GEWCHSELT!!
 ## 📱 Blazor To-Do & Reminder App
 ### Dieser App befindet sich noch im aktiven Entwicklung, daher funktionieren manche Funktion nicht.Bitte beim Nutzung Rücksicht nehmen.
 
