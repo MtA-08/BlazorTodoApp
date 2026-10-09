@@ -24,11 +24,9 @@ jobs:
       - name: Publish App
         run: dotnet publish BlazorApp3/BlazorApp3.csproj -c Release -o release --nologo
 
-      - name: Set GitHub Pages base path
-        env:
-          REPO_NAME: ${{ github.event.repository.name }}
-        run: |
-          sed -i "s|<base href=\"/\" />|<base href=\"/${REPO_NAME}/\" />|" release/wwwroot/index.html
+      - name: Change base-tag in index.html to match GitHub Pages repository
+        run: sed -i 's/<base href="\/" \/>/<base href="\/BlazorTodoApp\/" \/>/g' release/wwwroot/index.html
+
 
       - name: Add .nojekyll file
         run: touch release/wwwroot/.nojekyll
