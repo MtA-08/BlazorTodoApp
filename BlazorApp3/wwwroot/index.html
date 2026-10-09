@@ -1,33 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en" >
 <head>
-    <title>App</title>
-    <script>
-        (function () {
-            var base = document.createElement('base');
-            // If running on localhost or 127.0.0.1, use '/'
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                base.href = '/';
-            } else {
-                // Extracts '/BlazorTodoApp/' automatically on GitHub Pages
-                var path = window.location.pathname.split('/')[1];
-                base.href = path ? '/' + path + '/' : '/';
-            }
-            document.getElementsByTagName('head')[0].appendChild(base);
-        })();
-    </script>
-    <link rel="preload" id="webassembly" />
-    <link rel="stylesheet" href="css/app.css" />
-    <link rel="icon" href="favicon.png" />
-    <link href="BlazorApp3.styles.css" rel="stylesheet" />
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script type="importmap"></script>
-</head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>TodoApp</title>
+    <base href="/" />
 
+    <!-- Link to your CSS (Make sure app.css is in the wwwroot folder) -->
+    <link rel="stylesheet" href="css/app.css" />
+    <!-- This replaces TodoApp.Native.styles.css -->
+    <link rel="stylesheet" href="BlazorApp3.styles.css" />
+    <link rel="icon" href="data:," />
+</head>
 <body>
+    <div class="status-bar-safe-area"></div>
+
     <div id="app">
+        <!-- Kept your custom loading animation -->
         <svg class="loading-progress">
             <circle r="40%" cx="50%" cy="50%" />
             <circle r="40%" cx="50%" cy="50%" />
@@ -35,90 +24,11 @@
         <div class="loading-progress-text"></div>
     </div>
 
-    <div id="blazor-error-ui">
+    <div id="blazor-error-ui" data-nosnippet>
         An unhandled error has occurred.
         <a href="." class="reload">Reload</a>
         <span class="dismiss">🗙</span>
     </div>
-    <script>
-        window.appNotifications = {
-            checkPermission: function () {
-                return 'Notification' in window && Notification.permission === "granted";
-            },
-            askPermission: async function () {
-                if (!('Notification' in window)) return false;
-                const result = await Notification.requestPermission();
-                return result === "granted";
-            },
-            send: async function (title, message) {
-                if (!('Notification' in window)) {
-                    throw new Error("Notifications are not supported by this browser.");
-                }
-                if (Notification.permission !== "granted") {
-                    throw new Error("Notification permission has not been granted.");
-                }
-
-                if ('serviceWorker' in navigator) {
-                    const registration = await navigator.serviceWorker.getRegistration();
-
-                    if (registration) {
-                        const readyReg = await navigator.serviceWorker.ready;
-                        if ('showNotification' in readyReg) {
-                            await readyReg.showNotification(title, {
-                                body: message,
-                                icon: 'icon-192.png'
-                            });
-                            return;
-                        }
-                    }
-                }
-
-                new Notification(title, { body: message });
-            }
-        };
-
-        window.wheelPicker = {
-            init: function (elementId, dotnetHelper, methodToCall) {
-                const container = document.getElementById(elementId);
-                if (!container) return;
-
-                let timeout;
-                container.addEventListener('scroll', () => {
-                    clearTimeout(timeout);
-                    timeout = setTimeout(() => {
-                        const children = Array.from(container.children);
-                        const containerCenter = container.getBoundingClientRect().top + container.clientHeight / 2;
-
-                        let closest = children[0];
-                        let minDistance = Infinity;
-
-                        children.forEach(child => {
-                            const childCenter = child.getBoundingClientRect().top + child.clientHeight / 2;
-                            const distance = Math.abs(containerCenter - childCenter);
-                            if (distance < minDistance) {
-                                minDistance = distance;
-                                closest = child;
-                            }
-                        });
-
-                        const selectedValue = parseInt(closest.innerText, 10);
-                        if (!isNaN(selectedValue)) {
-                            dotnetHelper.invokeMethodAsync(methodToCall, selectedValue);
-                        }
-                    }, 100);
-                });
-            }
-        };
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js')
-                .then(reg => console.log('Service Worker registered successfully.', reg))
-                .catch(err => console.error('Service Worker registration failed:', err));
-        }
-    </script>
-    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
-
-
+    <script src="_framework/blazor.webassembly.js"></script>
 </body>
-
 </html>

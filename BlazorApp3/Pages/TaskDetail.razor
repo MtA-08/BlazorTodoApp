@@ -1,0 +1,622 @@
+﻿@page "/task/{Id}"
+
+@layout MainLayout
+@inject TaskStorageService TaskStorage
+@inject NavigationManager Navigation
+
+<div class="task-detail-page">
+    @if (isLoading)
+    {
+        <div class="loading-state">
+            <p>Aufgabe wird geladen...</p>
+        </div>
+    }
+    else if (task == null)
+    {
+        <div class="loading-state">
+            <p>Aufgabe wurde nicht gefunden.</p>
+        </div>
+    }
+    else
+    {
+        <!-- Action Header -->
+        <div class="detail-header-actions">
+            <button class="round-btn btn-back" @onclick="GoBack">
+                <img src="chevron-left.svg" />
+            </button>
+
+            <div class="right-actions">
+                <button class="round-btn btn-edit" @onclick="OpenEditModal" title="Bearbeiten">
+                   <img src="edit.svg" />
+                </button>
+                <button class="round-btn btn-delete" @onclick="DeleteTaskAsync" title="Löschen">
+                    <img src="red-trash.svg" />
+                </button>
+            </div>
+        </div>
+
+        <!-- DETAILIERTE ANSICHT-MODUS -->
+        <div class="detail-body">
+            <div class="detail-block">
+                <span class="field-label">NAME</span>
+                <h1 class="field-value task-title">@task.Name</h1>
+            </div>
+
+            <div class="detail-block">
+                <span class="field-label">BESCHREIBUNG</span>
+                <p class="field-value description-text">
+                    @(string.IsNullOrWhiteSpace(task.Description) ? "Keine Beschreibung vorhanden." : task.Description)
+                </p>
+            </div>
+
+            <div class="detail-block">
+                <span class="field-label">ERINNERUNGEN</span>
+                @if (task.Reminders != null && task.Reminders.Any())
+                {
+                    <div class="reminders-list">
+                        @foreach (var reminder in task.Reminders)
+                        {
+                            <div class="reminder-card">
+                                <img src="clock.svg" />
+                                <span class="reminder-days">
+                                    @FormatReminderDates(reminder)
+                                </span>
+                                <span class="reminder-time">
+                                    @reminder.FormattedTime
+                                </span>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="field-value empty-text">Keine Erinnerungen.</p>
+                }
+            </div>
+        </div>
+
+        <!-- BOTTOM SHEET: TASK BEARBEITEN -->
+        @if (isModalVisible)
+        {
+            <div class="sheet-overlay @(isClosing ? "closing" : "")" @onclick="CloseEditModalAsync"></div>
+            <div class="bottom-sheet @(isClosing ? "closing" : "")">
+
+                <div class="sheet-header">
+                    <h3>Task bearbeiten</h3>
+                    <button class="close-btn" @onclick="CloseEditModalAsync">
+                        <img src="x.svg" alt="Schließen" />
+                    </button>
+                </div>
+
+                <div class="sheet-content">
+                    <div class="input-group">
+                        <label>NAME</label>
+                        <input type="text" @bind="editTask.Name" maxlength="@MaxTaskNameLength" class="text-input-field" placeholder="Task Name...">
+                    </div>
+
+                    <div class="input-group">
+                        <label>BESCHREIBUNG</label>
+                        <textarea @bind="editTask.Description" class="text-input-field textarea-field" placeholder="Beschreibung (optional)..."></textarea>
+                    </div>
+
+                    <div class="input-group">
+                        <label>ERINNERUNGEN</label>
+                        <div class="select-menu-card" @onclick="ToggleReminderMenu">
+                            <div class="select-menu-left">
+                                <img src="clock.svg" alt="Clock" width="18" />
+                                <span>@(editTask.Reminders.Count > 0 ? $"{editTask.Reminders.Count} Erinnerung(en) aktiv" : "Keine Erinnerung")</span>
+                            </div>
+                            <span class="action-link">Konfigurieren</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sheet-footer">
+                    <button class="save-btn-full" @onclick="SaveEditAsync">
+                        <img src="check.svg" alt="Speichern" />
+                        <span>Änderungen speichern</span>
+                    </button>
+                </div>
+            </div>
+        }
+
+        <!-- BOTTOM SHEET: ERINNERUNGEN -->
+        @if (isReminderMenuVisible)
+        {
+            <div class="sheet-overlay @(isClosing ? "closing" : "")" @onclick="ToggleReminderMenuAsync"></div>
+            <div class="bottom-sheet @(isClosing ? "closing" : "")">
+
+                <div class="sheet-header">
+                    <h3>Erinnerungen verwalten</h3>
+                    <button class="close-btn" @onclick="ToggleReminderMenuAsync">
+                        <img src="x.svg" alt="Schließen" />
+                    </button>
+                </div>
+
+                <div class="sheet-content">
+                    @if (notificationsEnabled)
+                    {
+                        @foreach (var reminder in editTask.Reminders)
+                        {
+                            <div class="set-reminder-card">
+                                <div class="reminder-menu-day-picker">
+
+                                    <button class="day-chip @(IsSingleDateSelected(reminder,DateOnly.FromDateTime(DateTime.Today))? "selected" : "")"
+                                            @onclick="() => SetSingleReminderDate(reminder,DateOnly.FromDateTime(DateTime.Today))">
+                                    Heute
+                                    </button>
+
+                                    <button class="day-chip @(IsSingleDateSelected(reminder,DateOnly.FromDateTime(DateTime.Today.AddDays(1)))? "selected" : "")"
+                                            @onclick="() => SetSingleReminderDate(reminder,DateOnly.FromDateTime(DateTime.Today.AddDays(1)))">
+                                    Morgen
+                                    </button>
+
+                                    <button class="day-chip @(IsCustomDateSelection(reminder)? "selected" : "")"
+                                            @onclick="() => OpenDaySelection(reminder)">
+                                        Tag wählen
+                                    </button>
+                                </div>
+                            </div>
+                        }
+
+                        <button class="add-reminder-btn" @onclick="AddNewReminder">
+                            <img src="plus.svg" width="18" alt="Plus" />
+                            <span>Erinnerung hinzufügen</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="notification-permission-card">
+                            <p>Benachrichtigungen sind zurzeit deaktiviert.</p>
+                            <button class="ask-permission-button" @onclick="RequestNotificationPermission">
+                                Benachrichtigungen erlauben
+                            </button>
+                        </div>
+                    }
+                </div>
+
+                <div class="sheet-footer">
+                    <button class="save-btn-full" @onclick="ToggleReminderMenuAsync">
+                        <img src="check.svg" alt="Fertig" />
+                        <span>Fertig</span>
+                    </button>
+                </div>
+            </div>
+        }
+
+        <!-- BOTTOM SHEET / MODAL: ZEITAUSWAHL -->
+        @if (selectedReminder != null)
+        {
+            <div class="sheet-overlay @(isClosing ? "closing" : "")" @onclick="CloseTimePickerAsync"></div>
+            <div class="bottom-sheet compact-sheet @(isClosing ? "closing" : "")">
+
+                <div class="sheet-header">
+                    <h3>Uhrzeit auswählen</h3>
+                    <button class="close-btn" @onclick="CloseTimePickerAsync">
+                        <img src="x.svg" alt="Schließen" />
+                    </button>
+                </div>
+
+                <div class="sheet-content center-content">
+                    <input type="time" class="time-picker-input" @bind="tempTime" />
+                </div>
+
+                <div class="sheet-footer">
+                    <button class="save-btn-full" @onclick="SaveTimeAsync">
+                        <span>Uhrzeit übernehmen</span>
+                    </button>
+                </div>
+            </div>
+        }
+
+        <!-- BOTTOM SHEET: TAGE AUSWÄHLEN -->
+        @if (daySelectionReminder != null)
+        {
+            <div class="sheet-overlay @(isDaySelectionClosing ? "closing" : "")" @onclick="CloseDaySelectionAsync"></div>
+            <div class="bottom-sheet @(isDaySelectionClosing ? "closing" : "")">
+
+                <div class="sheet-header">
+                    <h3>Tage auswählen</h3>
+                    <button class="close-btn" @onclick="CloseDaySelectionAsync">
+                        <img src="x.svg" alt="Schließen" />
+                    </button>
+                </div>
+
+                <div class="sheet-content">
+                    <!-- Kalender Kopfzeile (Monatsnavigation) -->
+                    <div class="calendar-header">
+                        <button class="round-btn btn-back" @onclick="PrevMonth"><img src="chevron-left.svg" /></button>
+                        <h4 style="margin: 0;">@calendarDisplayDate.ToString("MMMM yyyy")</h4>
+                        <button class="round-btn btn-back" @onclick="NextMonth"><img src="chevron-right.svg" /></button>
+                    </div>
+
+                    <!-- Kalender Raster -->
+                    <div class="calendar-grid">
+                        <!-- Wochentage -->
+                        <div class="day-name">Mo</div><div class="day-name">Di</div>
+                        <div class="day-name">Mi</div><div class="day-name">Do</div>
+                        <div class="day-name">Fr</div><div class="day-name">Sa</div>
+                        <div class="day-name">So</div>
+
+                        <!-- Leere Felder für den Monatsanfang -->
+                        @for (int i = 0; i < GetEmptyDaysAtStart(); i++)
+                        {
+                            <div></div>
+                        }
+
+                        <!-- Eigentliche Tage -->
+                        @for (int d = 1;d <= DateTime.DaysInMonth(calendarDisplayDate.Year, calendarDisplayDate.Month);d++)
+                        {
+                            var date = new DateOnly(calendarDisplayDate.Year, calendarDisplayDate.Month,d);
+
+                            bool isSelected = selectedDatesDraft.Contains(date);
+
+                            <button class="day-chip @(isSelected ? "selected" : "")" @onclick="() => ToggleDate(date)">
+                                @d
+                            </button>
+                        }
+                    </div>
+                </div>
+                <div class="sheet-footer">
+                    <button class="save-btn-full"
+                            disabled="@(selectedDatesDraft.Count == 0)"
+                            @onclick="SaveDaySelectionAsync">
+                        <span>Auswahl übernehmen</span>
+                    </button>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private const int MaxTaskNameLength = 24;
+    private const int SheetAnimationDurationMs = 300;
+
+    [Parameter]
+    public string Id { get; set; } = string.Empty;
+
+    private List<TodoTask> tasks = new();
+    private TodoTask? task;
+    private bool isLoading = true;
+    private TodoTask editTask = new TodoTask();
+
+    private bool isModalVisible = false;
+    private bool isReminderMenuVisible = false;
+    private Reminder? selectedReminder;
+    private TimeOnly tempTime;
+    private bool notificationsEnabled = false;
+    private Reminder? daySelectionReminder;
+    private List<DateOnly> selectedDatesDraft = new();
+    private bool isDaySelectionClosing = false;
+    private DateTime calendarDisplayDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+
+    // Animation & UI States
+    private bool isClosing = false;
+    private double touchStartY = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        tasks = await TaskStorage.LoadTasksAsync();
+
+        task = tasks.FirstOrDefault(
+            task => task.Id == Id);
+
+        isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            StateHasChanged();
+        }
+    }
+
+    // ==========================================
+    // Animations-Hilfsmethode für Schließvorgänge
+    // ==========================================
+
+    private async Task AnimateCloseAsync(Action closeAction)
+    {
+        if (isClosing) return;
+        isClosing = true;
+        StateHasChanged();
+
+        await Task.Delay(250); // Warten bis die Schließ-Animation durchgelaufen ist
+
+        closeAction.Invoke();
+        isClosing = false;
+        StateHasChanged();
+    }
+
+    // ==========================================
+    // Navigation & Bearbeitung
+    // ==========================================
+
+    private void GoBack() => Navigation.NavigateTo("/");
+
+    private void OpenEditModal()
+    {
+        if (task == null)
+        {
+            return;
+        }
+
+        editTask = new TodoTask
+        {
+            Name = task.Name,
+            Description = task.Description,
+
+            Reminders = task.Reminders
+                .Select(r => new Reminder
+                {
+                    Id = r.Id,
+                    Dates = new List<DateOnly>(r.Dates),
+                    Time = r.Time
+                })
+                .ToList()
+        };
+
+        isClosing = false;
+        isModalVisible = true;
+    }
+
+    private Task CloseEditModalAsync() => AnimateCloseAsync(() => { isModalVisible = false; editTask = new TodoTask(); });
+
+    private async Task SaveEditAsync()
+    {
+        if (task == null ||
+            string.IsNullOrWhiteSpace(editTask.Name))
+        {
+            return;
+        }
+
+        string safeName =
+            editTask.Name.Length > MaxTaskNameLength
+                ? editTask.Name[..MaxTaskNameLength]
+                : editTask.Name;
+
+        task.Name = safeName;
+        task.Description = editTask.Description;
+        task.Reminders = editTask.Reminders;
+
+        await ScheduleNotificationsForTaskAsync(task);
+        await TaskStorage.SaveTasksAsync(tasks);
+
+        await CloseEditModalAsync();
+    }
+
+    private async Task DeleteTaskAsync()
+    {
+        if (task == null)
+        {
+            return;
+        }
+
+        tasks.Remove(task);
+
+        await TaskStorage.SaveTasksAsync(tasks);
+
+        Navigation.NavigateTo("/");
+    }
+
+    // ==========================================
+    // Erinnerungen & TimePicker
+    // ==========================================
+
+    private void ToggleReminderMenu()
+    {
+        isClosing = false;
+        isReminderMenuVisible = !isReminderMenuVisible;
+    }
+
+    private Task ToggleReminderMenuAsync()
+    {
+        if (isReminderMenuVisible)
+        {
+            return AnimateCloseAsync(() => isReminderMenuVisible = false);
+        }
+        else
+        {
+            ToggleReminderMenu();
+            return Task.CompletedTask;
+        }
+    }
+
+    private void AddNewReminder() => editTask.Reminders.Add(new Reminder());
+    private void RemoveReminder(Reminder reminder) => editTask.Reminders.Remove(reminder);
+
+    private void EditReminderTime(Reminder reminder)
+    {
+        selectedReminder = reminder;
+        tempTime = reminder.Time;
+        isClosing = false;
+    }
+
+    private async Task SaveTimeAsync()
+    {
+        if (selectedReminder == null)
+        {
+            return;
+        }
+
+        selectedReminder.Time = tempTime;
+
+        await CloseTimePickerAsync();
+    }
+
+    private Task CloseTimePickerAsync() => AnimateCloseAsync(() => selectedReminder = null);
+
+    private bool IsSingleDateSelected(Reminder reminder,DateOnly date)
+    {
+        return reminder.Dates.Count == 1 && reminder.Dates.Contains(date);
+    }
+
+    private bool IsCustomDateSelection(Reminder reminder)
+    {
+        DateOnly today = DateOnly.FromDateTime(DateTime.Today);
+
+        DateOnly tomorrow = today.AddDays(1);
+
+        if (reminder.Dates.Count != 1)
+        {
+            return true;
+        }
+
+        DateOnly selectedDate = reminder.Dates[0];
+
+        return selectedDate != today && selectedDate != tomorrow;
+    }
+
+    private void SetSingleReminderDate(Reminder reminder, DateOnly date)
+    {
+        reminder.Dates.Clear();
+        reminder.Dates.Add(date);
+    }
+
+    private void OpenDaySelection(Reminder reminder)
+    {
+        daySelectionReminder = reminder;
+
+        selectedDatesDraft = new List<DateOnly>(reminder.Dates);
+    }
+
+    // Schließt das Auswahlfenster animiert
+    private async Task CloseDaySelectionAsync()
+    {
+        isDaySelectionClosing = true;
+        StateHasChanged();
+
+        await Task.Delay(250);
+
+        daySelectionReminder = null;
+        selectedDatesDraft.Clear();
+
+        isDaySelectionClosing = false;
+    }
+
+    // ==========================================
+    // Benachrichtigungen
+    // ==========================================
+
+    private async Task RequestNotificationPermission()
+    {
+        StateHasChanged();
+    }
+
+    // ==========================================
+    // Datum Wähler Kalender
+    // ==========================================
+
+    // Monatsnavigation
+    private void PrevMonth()
+    {
+        calendarDisplayDate = calendarDisplayDate.AddMonths(-1);
+    }
+
+    private void NextMonth()
+    {
+        calendarDisplayDate = calendarDisplayDate.AddMonths(1);
+    }
+
+    // Berechnet die Einrückung für den ersten Tag des Monats im Raster
+    private int GetEmptyDaysAtStart()
+    {
+        int dayOfWeek = (int)calendarDisplayDate.DayOfWeek;
+        // C# Sonntag = 0, Montag = 1. Wir wollen Montag = 0 für das Raster:
+        return dayOfWeek == 0 ? 6 : dayOfWeek - 1;
+    }
+
+    private string FormatReminderDates(Reminder reminder)
+    {
+        return string.Join(", ", reminder.Dates.OrderBy(date => date).Select(FormatReminderDate));
+    }
+
+    private string FormatReminderDate(DateOnly date)
+    {
+        DateOnly today = DateOnly.FromDateTime(DateTime.Today);
+        if (date == today)
+        {
+            return "Heute";
+        }
+
+        if (date == today.AddDays(1))
+        {
+            return "Morgen";
+        }
+
+        return date.ToString("dd.MM.yyyy");
+    }
+
+    private async Task ScheduleNotificationsForTaskAsync(TodoTask task)
+    {
+        if (task.NotificationIds.Any())
+        {
+
+            task.NotificationIds.Clear();
+        }
+
+        if (task.IsCompleted || !notificationsEnabled)
+        {
+            return;
+        }
+
+        foreach (Reminder reminder in task.Reminders)
+        {
+            foreach (DateOnly date in reminder.Dates)
+            {
+                DateTime notifyTime = date.ToDateTime(reminder.Time);
+
+                // Keine Benachrichtigung mehr für vergangene Termine.
+                if (notifyTime <= DateTime.Now)
+                {
+                    continue;
+                }
+
+                int notificationId = CreateUniqueNotificationId();
+
+                task.NotificationIds.Add(notificationId);
+
+            }
+        }
+    }
+
+    private int CreateUniqueNotificationId()
+    {
+        var usedIds = tasks.SelectMany(task => task.NotificationIds).ToHashSet();
+        int id;
+
+        do
+        {
+            id = Random.Shared.Next(100_000, 1_000_000);
+        }
+        while (usedIds.Contains(id));
+
+        return id;
+    }
+
+    private async Task SaveDaySelectionAsync()
+    {
+        if (daySelectionReminder == null || selectedDatesDraft.Count == 0)
+        {
+            return;
+        }
+
+        daySelectionReminder.Dates = selectedDatesDraft.Distinct().OrderBy(date => date).ToList();
+
+        await CloseDaySelectionAsync();
+    }
+
+    private void ToggleDate(DateOnly date)
+    {
+        if (selectedDatesDraft.Contains(date))
+        {
+            selectedDatesDraft.Remove(date);
+        }
+        else
+        {
+            selectedDatesDraft.Add(date);
+        }
+    }
+}

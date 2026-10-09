@@ -1,485 +1,583 @@
 ﻿@page "/"
+
 @layout MainLayout
-@inject IJSRuntime JSRuntime
-@using System.Text.Json
-@using System.Threading
+@inject TaskStorageService TaskStorage
+@inject NavigationManager Navigation
 
 <PageTitle>Homepage</PageTitle>
 
-<div class="task-card-grid">
+<div class="task-card-page">
 
-    <!-- Add Task Button -->
-    <button class="add-task-button" id="add-task-button" @onclick="ShowModal">
-        <div>
-            <img src="plus-circle.svg" alt="Add">
-        </div>
-    </button>
+    <!-- Header -->
+    <div class="page-header">
+        <button class="round-btn btn-settings" @onclick="() => isSettingsMenuVisible = !isSettingsMenuVisible" title="Einstellungen">
+            <img src="settings.svg" width="24" height="24" />
+        </button>
 
-    <!-- Task Cards -->
-    @foreach (var task in tasks)
-    {
-        <div class="task-card @(task.IsCompleted ? "task-completed" : "")" @onpointerdown="() => StartPress(task)" @onpointerup="CancelPress" @onpointerleave="CancelPress">
-            <div class="task-card-preview">
-                <button class="complete-btn" @onclick="() => ToggleTaskCompletion(task)">
-                    <img src="check.svg" width="20" height="20">
+        <button class="round-btn btn-add-task" @onclick="ShowModal" title="Task erstellen">
+            <img src="blue-plus.svg" width="24" height="24" />
+        </button>
+    </div>
+
+    <!-- Task Cards Liste -->
+    <div class="task-list">
+        @foreach (var task in tasks)
+        {
+            <div class="task-card @(task.IsCompleted ? "task-completed" : "")" @onclick="() => OpenTaskDetail(task.Id)">
+                <div class="task-info">
+                    <p class="task-title">@task.Name</p>
+                </div>
+
+                <button class="round-btn complete-btn @(task.IsCompleted ? "is-checked" : "")"
+                        @onclick="() => ToggleTaskCompletionAsync(task)"
+                        @onclick:stopPropagation="true">
+                    @if (task.IsCompleted)
+                    {
+                        <img src="check.svg" width="18" height="18">
+                    }
                 </button>
+            </div>
+        }
+    </div>
 
-                <p class="task-title">@task.Name</p>
+    <!-- BOTTOM SHEET: EINSTELLUNGEN -->
+    @if (isSettingsMenuVisible)
+    {
+        <div class="sheet-overlay @(isTaskModalClosing ? "closing" : "")" @onclick="() => isSettingsMenuVisible = !isSettingsMenuVisible"></div>
+        <div class="bottom-sheet @(isTaskModalClosing ? "closing" : "")">
 
-                <div class="header-controls">
-                    <div class="priority-color-band" style="background-color: @GetPriotityColor(task.Priority);"></div>
-                    <button class="shavron-up-down" @onclick="task.ToggleExpandedView"><img src="@(task.isExpanded ? "chevron-up.svg" : "chevron-down.svg")"></button>
+            <div class="sheet-header">
+                <h3>Einstellungen</h3>
+                <button class="close-btn" @onclick="() => isSettingsMenuVisible = !isSettingsMenuVisible">
+                    <img src="x.svg" alt="Schließen" />
+                </button>
+            </div>
+
+            <div class="sheet-content">
+                
+            </div>
+        </div>
+    }
+
+    <!-- BOTTOM SHEET: TASK ERSTELLEN -->
+    @if (isModalVisible)
+    {
+        <div class="sheet-overlay @(isTaskModalClosing ? "closing" : "")" @onclick="HideModalAsync"></div>
+        <div class="bottom-sheet @(isTaskModalClosing ? "closing" : "")">
+
+            <div class="sheet-header">
+                <h3>Neues ToDo erstellen</h3>
+                <button class="close-btn" @onclick="HideModalAsync">
+                    <img src="x.svg" alt="Schließen" />
+                </button>
+            </div>
+
+            <div class="sheet-content">
+                <div class="input-group">
+                    <label>NAME</label>
+                    <input type="text" @bind="newTask.Name" maxlength="@MaxTaskNameLength" class="text-input-field" placeholder="Task Name..." />
+                </div>
+
+                <div class="input-group">
+                    <label>BESCHREIBUNG</label>
+                    <textarea @bind="newTask.Description" class="text-input-field textarea-field" placeholder="Beschreibung (optional)..."></textarea>
+                </div>
+
+                <div class="input-group">
+                    <label>ERINNERUNGEN</label>
+                    <div class="select-menu-card" @onclick="ToggleReminderMenuAsync">
+                        <div class="select-menu-left">
+                            <img src="clock.svg" />
+                            <span>@(newTask.Reminders.Count > 0 ? $"{newTask.Reminders.Count} Erinnerung(en) aktiv" : "Keine Erinnerung")</span>
+                        </div>
+                        <span class="action-link">Hinzufügen</span>
+                    </div>
                 </div>
             </div>
-            @if (task.isExpanded)
-            {
-                <div>
-                    <hr class="divider">
-                    <p>@task.Description</p>
-                    <hr class="divider">
-                    <p>Erinnerungen: @task.Reminder</p>
+
+            <div class="sheet-footer">
+                <button class="save-btn-full" @onclick="SaveTaskAsync">
+                    <img src="check.svg" alt="Erstellen" />
+                    <span>Task erstellen</span>
+                </button>
+            </div>
+        </div>
+    }
+
+    <!-- BOTTOM SHEET: ERINNERUNGEN ERSTELLEN -->
+    @if (isReminderMenuVisible)
+    {
+        <div class="sheet-overlay @(isReminderModalClosing ? "closing" : "")" @onclick="ToggleReminderMenuAsync"></div>
+        <div class="bottom-sheet @(isReminderModalClosing ? "closing" : "")">
+
+            <div class="sheet-header">
+                <h3>Erinnerungen erstellen</h3>
+                <button class="close-btn" @onclick="ToggleReminderMenuAsync">
+                    <img src="x.svg" alt="Schließen" />
+                </button>
+            </div>
+
+            <div class="sheet-content">
+                @if (notificationsEnabled)
+                {
+                    @foreach (var reminder in newTask.Reminders)
+                    {
+                        <div class="set-reminder-card">
+                            <div class="reminder-menu-day-picker">
+                                <button class="day-chip @(IsSingleDateSelected(reminder,DateOnly.FromDateTime(DateTime.Today))
+                                                            ? "selected" : "")" @onclick="() => SetSingleReminderDate(reminder,DateOnly.FromDateTime(DateTime.Today))">
+                                Heute
+                                </button>
+                                <button class="day-chip @(IsSingleDateSelected(
+                                                reminder,
+                                                DateOnly.FromDateTime(DateTime.Today.AddDays(1)))
+                                                ? "selected"
+                                                : "")"
+                                        @onclick="() => SetSingleReminderDate(
+                                                reminder,
+                                                DateOnly.FromDateTime(DateTime.Today.AddDays(1)))">
+                                Morgen
+                                </button>
+                                <button class="day-chip @(IsCustomDateSelection(reminder)? "selected": "")"
+                                                        @onclick="() => OpenDaySelection(reminder)">
+                                    Tag wählen
+                                </button>
+                            </div>
+                            <div class="reminder-card-footer">
+                                <div class="reminder-menu-time-picker" @onclick="() => EditReminderTime(reminder)">
+                                    <img src="clock.svg" width="24" alt="Uhrzeit" />
+                                    <input type="time" class="time-picker-input" @bind-value="TempTime" @bind-value:after="SaveTimeAsync" placeholder="@reminder.FormattedTime" />
+                                </div>
+                                <button class="reminder-delete-btn" @onclick="() => RemoveReminder(reminder)">
+                                    <img src="red-trash.svg" width="18" alt="Löschen" />
+                                </button>
+                            </div>
+                        </div>
+                    }
+
+                    <button class="add-reminder-btn" @onclick="AddNewReminder">
+                        <img src="plus.svg" width="18" alt="Plus" />
+                        <span>Erinnerung hinzufügen</span>
+                    </button>
+                }
+                else
+                {
+                    <div class="notification-permission-card">
+                        <p>Benachrichtigungen sind zurzeit deaktiviert.</p>
+                        <button class="ask-permission-button" @onclick="RequestNotificationPermission">
+                            Benachrichtigungen erlauben
+                        </button>
+                    </div>
+                }
+            </div>
+
+            <div class="sheet-footer">
+                <button class="save-btn-full" @onclick="ToggleReminderMenuAsync">
+                    <img src="check.svg" alt="Fertig" />
+                    <span>Fertig</span>
+                </button>
+            </div>
+        </div>
+    }
+
+    <!-- BOTTOM SHEET: ZEITWÄHLER -->
+    @*@if (selectedReminder != null)
+    {
+        <div class="sheet-overlay @(isTimePickerClosing ? "closing" : "")" @onclick="CloseTimePickerAsync"></div>
+        <div class="bottom-sheet compact-sheet @(isTimePickerClosing ? "closing" : "")">
+
+            <div class="sheet-header">
+                <h3>Uhrzeit auswählen</h3>
+                <button class="close-btn" @onclick="CloseTimePickerAsync">
+                    <img src="x.svg" alt="Schließen" />
+                </button>
+            </div>
+
+            <div class="sheet-content center-content">
+                <input type="time" class="time-picker-input" @bind="TempTime" />
+            </div>
+
+            <div class="sheet-footer">
+                <button class="save-btn-full" @onclick="SaveTimeAsync">
+                    <span>Uhrzeit übernehmen</span>
+                </button>
+            </div>
+        </div>
+    }*@
+
+    <!-- BOTTOM SHEET: TAGE AUSWÄHLEN -->
+    @if (daySelectionReminder != null)
+    {
+        <div class="sheet-overlay @(isDaySelectionClosing ? "closing" : "")" @onclick="CloseDaySelectionAsync"></div>
+        <div class="bottom-sheet @(isDaySelectionClosing ? "closing" : "")">
+
+            <div class="sheet-header">
+                <h3>Tage auswählen</h3>
+                <button class="close-btn" @onclick="CloseDaySelectionAsync">
+                    <img src="x.svg" alt="Schließen" />
+                </button>
+            </div>
+
+            <div class="sheet-content">
+                <!-- Kalender Kopfzeile (Monatsnavigation) -->
+                <div class="calendar-header" >
+                    <button class="round-btn btn-back" @onclick="PrevMonth"><img src="chevron-left.svg" /></button>
+                    <h4 style="margin: 0;">@calendarDisplayDate.ToString("MMMM yyyy")</h4>
+                    <button class="round-btn btn-back" @onclick="NextMonth"><img src="chevron-right.svg" /></button>
                 </div>
-            }
+
+                <!-- Kalender Raster -->
+                <div class="calendar-grid">
+                    <!-- Wochentage -->
+                    <div class="day-name">Mo</div><div class="day-name">Di</div>
+                    <div class="day-name">Mi</div><div class="day-name">Do</div>
+                    <div class="day-name">Fr</div><div class="day-name">Sa</div>
+                    <div class="day-name">So</div>
+
+                    <!-- Leere Felder für den Monatsanfang -->
+                    @for (int i = 0; i < GetEmptyDaysAtStart(); i++)
+                    {
+                        <div></div>
+                    }
+
+                    <!-- Eigentliche Tage -->
+                    @for (int d = 1; d <= DateTime.DaysInMonth(calendarDisplayDate.Year, calendarDisplayDate.Month); d++)
+                    {
+                        var date = new DateOnly(
+                            calendarDisplayDate.Year,
+                            calendarDisplayDate.Month,
+                            d);
+
+                        bool isSelected =
+                            selectedDatesDraft.Contains(date);
+
+                        <button class="day-chip @(isSelected ? "selected" : "")"
+                                @onclick="() => ToggleDate(date)">
+                            @d
+                        </button>
+                    }
+                </div>
+            </div>
+            <div class="sheet-footer">
+                <button class="save-btn-full"
+                        disabled="@(selectedDatesDraft.Count == 0)"
+                        @onclick="SaveDaySelectionAsync">
+                    <span>Auswahl übernehmen</span>
+                </button>
+            </div>
         </div>
     }
 </div>
 
-
-<!-- Add task Overlay -->
-@if (isModalVisible)
-{
-    <div class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-upper-part">
-                <button class="close-btn" @onclick="HideModal"><img src="x.svg"></button>
-                <h3>Neues ToDo erstellen</h3>
-            </div>
-            <div class="input-group">
-                <label style="color: #888;">Name</label>
-                <input type="text" @bind="newTask.Name" maxlength="24" class="text-input-field">
-            </div>
-            <div class="input-group">
-                <label style="color: #888;">Beschreibeung</label>
-                <input type="text" @bind="newTask.Description" class="text-input-field">
-            </div>
-            <div class="select-row">
-                <div class="input-group">
-                    <label style="color: #888;">Priorität</label>
-                    <select @bind="newTask.Priority" class="select-menu">
-                        <option value="-">Keine</option>
-                        <option value="Low">Niedrig</option>
-                        <option value="Mid">Mittel</option>
-                        <option value="High">Hoch</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label style="color: #888;">Erinnerungen</label>
-                    <div class="select-menu" @onclick="ToggleReminderMenu"></div>
-                </div>
-            </div>
-            <button class="save-btn" @onclick="SaveTask"><img src="check.svg"></button>
-        </div>
-    </div>
-}
-
-<!-- Optionen bearbeiten und löschen Overlay -->
-@if (isOptionsMenuVisible)
-{
-    <div class="modal-overlay" @onclick="CloseOptionsMenu">
-        <!-- stopPropagation prevents closing when clicking the actual menu box -->
-        <div class="modal-content options-menu" @onclick:stopPropagation="true">
-            <h3>Optionen für: @activeTask.Name</h3>
-            <button class="save-btn" style="width: 100%;" @onclick="EditTask">Bearbeiten</button>
-            <button class="save-btn" style="width: 100%; background-color: #9C1C00; border-color: #851900" @onclick="DeleteTask">Löschen</button>
-        </div>
-    </div>
-}
-
-<!-- Erinnerung Menü Overlay-->
-@if (isReminderMenuVisible)
-{
-    <div class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-upper-part">
-                <button class="close-btn" @onclick="ToggleReminderMenu"><img src="x.svg"></button>
-                <h3>Erinnerungen erstellen</h3>
-            </div>
-            @if (notificationsEnabled)
-            {
-                @foreach (var Reminder in newTask.Reminders)
-                {
-                    <div class="set-reminder-menu">
-                        <label>Erinnerung #1</label>
-                        <div class="reminder-menu-day-picker">
-                            @foreach (var day in new[] { "Mo", "Di", "Mi", "Do", "Fr", "Sa", "So" })
-                            {
-                                <p class="@(Reminder.Days.Contains(day) ? "selected-day" : "")" 
-                                @onclick="() => ToggleDay(Reminder, day)">
-                                    @day
-                                </p>
-                            }
-                        </div>
-                        <div style="display: flex;">
-                            <div class="reminder-menu-time-picker" @onclick="() => EditReminderTime(Reminder)">
-                                <img src="clock.svg" style="padding-right: 8px;"><p>@Reminder.FormattedTime</p>
-                            </div>
-                            <div class="reminder-menu-delete" @onclick="() => RemoveReminder(Reminder)">
-                                <img src="trash.svg">
-                            </div>
-                        </div>
-                    </div>
-                }
-
-                <div class="add-remider-button" @onclick="AddNewReminder">
-                    <img src="plus.svg" style="padding-right: 5px;"><p>Erinnerung hinzufügen</p>
-                </div>
-                <div class="add-remider-button" @onclick='() => SendNotification("Titel", "Text in Benachrichtigung")'>
-                    <img src="plus.svg" style="padding-right: 5px;"><p>Noti senden</p>
-                </div>
-            }
-            else
-            {
-                <div class="notification-permission-query">
-                    <button class="ask-permission-button" @onclick="RequestNotificationPermission">Benachrichtigungen erlauben</button>
-                </div>
-            }
-        </div>
-    </div>
-}
-
-<!-- Erinnerung Zeit wähler Overlay -->
-@if (selectedReminder != null)
-{
-    <div class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-upper-part">
-                <button class="close-btn" @onclick="CloseTimePicker"><img src="x.svg"></button>
-                <h3>Zeit auswählen:</h3>
-            </div>
-            <input type="time" class="time-input" @bind="TempTime" />
-
-                <button class="save-btn" @onclick="SaveTime">Fertig</button>
-            
-        </div>
-    </div>
-}
-
 @code {
-    // List for saved tasks
-    private List<TodoTask> tasks = new();
+    private const string TasksStorageKey = "myTasks";
+    private const int MaxTaskNameLength = 24;
+    private const int SheetAnimationDurationMs = 300;
 
-    // Temp task for modal inputs
+    private List<TodoTask> tasks = new();
     private TodoTask newTask = new TodoTask();
 
-    // Add task modal toggle
     private bool isModalVisible = false;
+    private bool isReminderMenuVisible = false;
+    private bool isSettingsMenuVisible = false;
 
-    private void ShowModal()
-    {
-        isModalVisible = true;
-    }
+    private Reminder? selectedReminder;
+    private TimeOnly TempTime;
+    private bool notificationsEnabled = false;
+    private Reminder? daySelectionReminder;
+    private bool isDaySelectionClosing = false;
+    private DateTime calendarDisplayDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
 
-    private void HideModal()
-    {
-        newTask = new TodoTask();
-        isModalVisible = false;
-        isEditing = false;
-        activeTask = null;
-    }
+    private bool isTaskModalClosing = false;
+    private bool isReminderModalClosing = false;
+    private bool isTimePickerClosing = false;
 
-    private async Task SaveTask()
-    {
-        string safeName = newTask.Name;
-        if (safeName.Length > 24)
-        {
-            safeName = safeName.Substring(0, 24);
-        }
 
-        if (isEditing && activeTask != null)
-        {
-            // Update existing task details
-            activeTask.Name = safeName;
-            activeTask.Description = newTask.Description;
-            activeTask.Priority = newTask.Priority;
-            activeTask.Reminder = newTask.Reminder;
-            activeTask.Reminders = newTask.Reminders; // Commit the updated reminders list
-        }
-        else
-        {
-            // Create new task and preserve its reminders list
-            tasks.Add(new TodoTask
-            {
-                Name = safeName,
-                Description = newTask.Description,
-                Priority = newTask.Priority,
-                Reminder = newTask.Reminder,
-                Reminders = newTask.Reminders // Attach the reminders list here
-            });
-        }
 
-        HideModal();
-        await SaveDataToBrowser();
-    }
+    // ==========================================
+    // Modal Steuerung
+    // ==========================================
 
-    // Priority color controller
-    private string GetPriotityColor(string priorityLevel)
-    {
-        return priorityLevel switch
-        {
-            "Low" => "rgba(26, 201, 34, 0.8)",
-            "Mid" => "rgba(225, 225, 8, 0.8)",
-            "High" => "rgba(255, 0, 0, 0.471)",
-            "-" => "transparent",
-            _ => "default value"
-        };
-    }
-
-    //speichert die Liste im Browser als ein Json Textdatei
-    private async Task SaveDataToBrowser()
-    {
-        // übersetzt die Liste "tasks" zur ein JSON Text string
-        string json = JsonSerializer.Serialize(tasks);
-
-        // speichert den JSON string als "mytasks"
-        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "myTasks", json);
-    }
-
-    // wird beim öffnen/aktualiesern der Seite ausgeführt
     protected override async Task OnInitializedAsync()
     {
-        // prüft ob der Browser eine Datei mit den namen "myTasks" hat
-        string savedJson = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "myTasks");
-
-        if (!string.IsNullOrEmpty(savedJson))
-        {
-            tasks = JsonSerializer.Deserialize<List<TodoTask>>(savedJson) ?? new List<TodoTask>();
-        }
-    }
-
-    private async Task ToggleTaskCompletion(TodoTask task)
-    {
-        task.IsCompleted = !task.IsCompleted;
-
-        await SaveDataToBrowser();
-    }
-
-    // Variablen für zeiterfassung bei einer drücken und halte Geste auf ein Task
-    private CancellationTokenSource? pressTimer;
-    private TodoTask? activeTask = null;
-    private bool isOptionsMenuVisible = false;
-    private bool isEditing = false;
-
-    private async Task StartPress(TodoTask task)
-    {
-        pressTimer = new CancellationTokenSource();
-        try
-        {
-            // 600ms warten damit nicht jeder druck als halte Geste erkannt wird
-            await Task.Delay(600, pressTimer.Token);
-
-            // hier wird nur ausgeführt wenn der obere Bedingung erfüllt wurde
-            activeTask = task;
-            isOptionsMenuVisible = true;
-            StateHasChanged();
-        }
-        catch (TaskCanceledException) {/*es wid nichts gemacht wenn der druck kürzer als 600ms war*/}
-    }
-
-    private void CancelPress()
-    {
-        pressTimer?.Cancel(); // Zeiterfassung stoppen wenn der Nutzer finger abhebt
-    }
-
-    private void CloseOptionsMenu() => isOptionsMenuVisible = false;
-
-    // Task löschen
-    private async Task DeleteTask()
-    {
-        if (activeTask != null)
-        {
-            tasks.Remove(activeTask);
-
-            //Löschung der Task speichern
-            await SaveDataToBrowser();
-        }
-        CloseOptionsMenu();
-    }
-
-    // Task bearbeiten
-    private void EditTask()
-    {
-        isEditing = true;
-        CloseOptionsMenu();
-
-        // Populate temporary newTask state including deep-copied reminders
-        newTask = new TodoTask
-        {
-            Name = activeTask!.Name,
-            Description = activeTask.Description,
-            Priority = activeTask.Priority,
-            Reminder = activeTask.Reminder,
-            Reminders = activeTask.Reminders.Select(r => new Reminder
-            {
-                Id = r.Id,
-                Days = new List<string>(r.Days),
-                Hour = r.Hour,
-                Minute = r.Minute
-            }).ToList()
-        };
-
-        ShowModal();
-    }
-
-    // Task class
-    public class TodoTask
-    {
-        public string Name { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public string Priority { get; set; } = "-";
-        public string Reminder { get; set; } = "-";
-        public bool IsCompleted { get; set; } = false;
-
-        public List<Reminder> Reminders { get; set; } = new();
-
-        public bool isExpanded { get; set; } = false;
-        public void ToggleExpandedView()
-        {
-            isExpanded = !isExpanded;
-        }
-    }
-
-    //reminder class
-    public class Reminder
-    {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-        public List<string> Days { get; set; } = new List<string> { "Mo", "Di", "Mi", "Do", "Fr" };
-        public int Hour { get; set; } = 12;
-        public int Minute { get; set; } = 0;
-
-        public string FormattedTime => $"{Hour:D2}:{Minute:D2}";
-
-        public Reminder()
-        {
-            var defaultTime = DateTime.Now.AddHours(1);
-            Hour = defaultTime.Hour;
-            Minute = defaultTime.Minute;
-        }
-    }
-
-    private bool isReminderMenuVisible = false;
-
-    private void ToggleReminderMenu()
-    {
-        isReminderMenuVisible = !isReminderMenuVisible;
-    }
-
-    // fügt eine leere Erinnerung Modul zur aktuellen Task
-    private void AddNewReminder()
-    {
-        newTask.Reminders.Add(new Reminder());
-    }
-
-    // Löscht ein spezifische Erinnerung
-    private void RemoveReminder(Reminder reminder)
-    {
-        newTask.Reminders.Remove(reminder);
-    }
-
-    // Schaltet ein Tag an oder aus
-    private void ToggleDay(Reminder reminder, string day)
-    {
-        if (reminder.Days.Contains(day))
-        {
-            reminder.Days.Remove(day);
-        }
-        else
-        {
-            reminder.Days.Add(day);
-        }
-    }
-
-    // benachrictigungen
-
-    // Variable um Erlaubnis zu prüfen
-    private bool notificationsEnabled = false;
-
-    // Funktion um nach benachrictigung Erlaubnis zu fragen
-    private async Task RequestNotificationPermission()
-    {
-        notificationsEnabled = await JSRuntime.InvokeAsync<bool>("appNotifications.askPermission");
-    }
-
-    // Funktion um Benachrichtigung zu senden
-    private async Task SendNotification(string title, string message)
-    {
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("appNotifications.send", title, message);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Notification failed: {ex.Message}");
-        }
-    }
-
-    private async Task TriggerTaskReminder(TodoTask task)
-    {
-        string title = $"Erinnerung: {task.Name}";
-        string text = string.IsNullOrEmpty(task.Description) 
-            ? "Deine Aufgabe ist fällig!" 
-            : task.Description;
-
-        await SendNotification(title, text);
-    }
-
-    // Zeigt darauf zur welche Task der Erinnerung gehört
-    private Reminder? selectedReminder;
-
-    private DotNetObjectReference<Home>? objRef;
-
-    public void Dispose()
-    {
-        objRef?.Dispose();
-    }
-
-    private TimeOnly TempTime;
-
-    // 1. Opens the picker and loads the current time into the input
-    private void EditReminderTime(Reminder reminder)
-    {
-        selectedReminder = reminder;
-        TempTime = new TimeOnly(reminder.Hour, reminder.Minute);
-    }
-
-    // 2. Saves the new time back to your Reminder object
-    private void SaveTime()
-    {
-        if (selectedReminder != null)
-        {
-            selectedReminder.Hour = TempTime.Hour;
-            selectedReminder.Minute = TempTime.Minute;
-
-            selectedReminder = null;
-
-            StateHasChanged();
-        }
-    }
-
-    // 3. Cancels without saving
-    private void CloseTimePicker()
-    {
-        selectedReminder = null;
+        tasks = await TaskStorage.LoadTasksAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // Query the native browser state directly—no localStorage required
-            notificationsEnabled = await JSRuntime.InvokeAsync<bool>("appNotifications.checkPermission");
-
-            // Re-render the UI once the true browser state is known
             StateHasChanged();
         }
+    }
+
+    private void ShowModal()
+    {
+        newTask = new TodoTask();
+        isModalVisible = true;
+        isTaskModalClosing = false;
+    }
+
+    private async Task HideModalAsync()
+    {
+        isTaskModalClosing = true;
+        StateHasChanged();
+        await Task.Delay(SheetAnimationDurationMs);
+        isModalVisible = false;
+        isTaskModalClosing = false;
+        newTask = new TodoTask();
+    }
+
+    private void OpenTaskDetail(string taskId)
+    {
+        Navigation.NavigateTo($"/task/{taskId}");
+    }
+
+    // ==========================================
+    // Task Speicherung & Status
+    // ==========================================
+
+    private async Task SaveTaskAsync()
+    {
+        if (string.IsNullOrWhiteSpace(newTask.Name)) return;
+
+        string safeName = newTask.Name.Length > MaxTaskNameLength ? newTask.Name.Substring(0, MaxTaskNameLength) : newTask.Name;
+
+        var createdTask = new TodoTask
+        {
+            Name = safeName,
+            Description = newTask.Description,
+            Reminders = newTask.Reminders
+        };
+
+        tasks.Add(createdTask);
+
+        await ScheduleNotificationsForTaskAsync(createdTask);
+        await TaskStorage.SaveTasksAsync(tasks);
+
+        await HideModalAsync();
+        StateHasChanged(); // Zwingt Blazor, die Liste neu zu rendern
+    }
+
+    private async Task ToggleTaskCompletionAsync(TodoTask task)
+    {
+        task.IsCompleted = !task.IsCompleted;
+        await ScheduleNotificationsForTaskAsync(task);
+        await TaskStorage.SaveTasksAsync(tasks);
+    }
+
+    // ==========================================
+    // Erinnerungen & TimePicker
+    // ==========================================
+
+    private async Task ToggleReminderMenuAsync()
+    {
+        if (isReminderMenuVisible)
+        {
+            await CloseReminderMenuAsync();
+        }
+        else
+        {
+            isReminderMenuVisible = true;
+            isReminderModalClosing = false;
+        }
+    }
+
+    private async Task CloseReminderMenuAsync()
+    {
+        isReminderModalClosing = true;
+        StateHasChanged();
+        await Task.Delay(SheetAnimationDurationMs);
+        isReminderMenuVisible = false;
+        isReminderModalClosing = false;
+    }
+
+    private void AddNewReminder() => newTask.Reminders.Add(new Reminder());
+
+    private void RemoveReminder(Reminder reminder) => newTask.Reminders.Remove(reminder);
+
+
+    private void EditReminderTime(Reminder reminder)
+    {
+        selectedReminder = reminder;
+        TempTime = reminder.Time;
+    }
+
+    private async Task SaveTimeAsync()
+    {
+        if (selectedReminder == null)
+        {
+            return;
+        }
+
+        selectedReminder.Time = TempTime;
+
+        await CloseTimePickerAsync();
+    }
+
+    private async Task CloseTimePickerAsync()
+    {
+        isTimePickerClosing = true;
+        StateHasChanged();
+        await Task.Delay(SheetAnimationDurationMs);
+        selectedReminder = null;
+        isTimePickerClosing = false;
+    }
+
+    private List<DateOnly> selectedDatesDraft = new();
+
+    // Öffnet das Fenster für die manuelle Tagesauswahl
+    private void OpenDaySelection(Reminder reminder)
+    {
+        daySelectionReminder = reminder;
+
+        selectedDatesDraft = new List<DateOnly>(reminder.Dates);
+    }
+
+    // ==========================================
+    // Benachrichtigungen (LocalNotification)
+    // ==========================================
+
+    private async Task RequestNotificationPermission()
+    {
+        StateHasChanged();
+    }
+
+    private async Task ScheduleNotificationsForTaskAsync(TodoTask task)
+    {
+        if (task.NotificationIds.Any())
+        {
+
+            task.NotificationIds.Clear();
+        }
+
+        if (task.IsCompleted || !notificationsEnabled)
+        {
+            return;
+        }
+
+        foreach (Reminder reminder in task.Reminders)
+        {
+            foreach (DateOnly date in reminder.Dates)
+            {
+                DateTime notifyTime = date.ToDateTime(reminder.Time);
+
+                // Keine Benachrichtigung mehr für vergangene Termine.
+                if (notifyTime <= DateTime.Now)
+                {
+                    continue;
+                }
+
+                int notificationId = CreateUniqueNotificationId();
+
+                task.NotificationIds.Add(notificationId);
+            }
+        }
+    }
+
+    private int CreateUniqueNotificationId()
+    {
+        var usedIds = tasks
+            .SelectMany(task => task.NotificationIds)
+            .ToHashSet();
+
+        int id;
+
+        do
+        {
+            id = Random.Shared.Next(
+                100_000,
+                1_000_000);
+        }
+        while (usedIds.Contains(id));
+
+        return id;
+    }
+
+    // ==========================================
+    // Datum Wähler Kalender
+    // ==========================================
+
+    // Monatsnavigation
+    private void PrevMonth()
+    {
+        calendarDisplayDate = calendarDisplayDate.AddMonths(-1);
+    }
+
+    private void NextMonth()
+    {
+        calendarDisplayDate = calendarDisplayDate.AddMonths(1);
+    }
+
+    // Berechnet die Einrückung für den ersten Tag des Monats im Raster
+    private int GetEmptyDaysAtStart()
+    {
+        int dayOfWeek = (int)calendarDisplayDate.DayOfWeek;
+        // C# Sonntag = 0, Montag = 1. Wir wollen Montag = 0 für das Raster:
+        return dayOfWeek == 0 ? 6 : dayOfWeek - 1;
+    }
+
+    private bool IsSingleDateSelected(Reminder reminder,DateOnly date)
+    {
+        return reminder.Dates.Count == 1 && reminder.Dates.Contains(date);
+    }
+
+    private bool IsCustomDateSelection(Reminder reminder)
+    {
+        DateOnly today = DateOnly.FromDateTime(DateTime.Today);
+
+        DateOnly tomorrow = today.AddDays(1);
+
+        if (reminder.Dates.Count != 1)
+        {
+            return true;
+        }
+
+        DateOnly selectedDate = reminder.Dates[0];
+
+        return selectedDate != today && selectedDate != tomorrow;
+    }
+
+    private void SetSingleReminderDate(Reminder reminder, DateOnly date)
+    {
+        reminder.Dates.Clear();
+        reminder.Dates.Add(date);
+    }
+
+    private void ToggleDate(DateOnly date)
+    {
+        if (selectedDatesDraft.Contains(date))
+        {
+            selectedDatesDraft.Remove(date);
+        }
+        else
+        {
+            selectedDatesDraft.Add(date);
+        }
+    }
+
+    private async Task SaveDaySelectionAsync()
+    {
+        if (daySelectionReminder == null || selectedDatesDraft.Count == 0)
+        {
+            return;
+        }
+
+        daySelectionReminder.Dates = selectedDatesDraft.Distinct().OrderBy(date => date).ToList();
+
+        await CloseDaySelectionAsync();
+    }
+
+    private async Task CloseDaySelectionAsync()
+    {
+        isDaySelectionClosing = true;
+        StateHasChanged();
+
+        await Task.Delay(250);
+
+        daySelectionReminder = null;
+        selectedDatesDraft.Clear();
+
+        isDaySelectionClosing = false;
     }
 }

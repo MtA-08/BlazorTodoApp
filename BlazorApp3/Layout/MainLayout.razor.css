@@ -1,21 +1,6 @@
-/* Layout/MainLayout.razor.css */
-.container {
-    display: grid;
-    grid-template-columns: 1fr;
-    grid-template-rows: 42px 93%;
-    gap: 0px 0px;
-}
 
-.upper-band {
-    background-color: #131215;
-    border-bottom: 1px solid rgb(39, 39, 39);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 24px;
-}
 
-/* Paste all your .menu-bar, .menu-bar-position, and .menu-list CSS here! */
+/* MENU BAR  */
 .menu-bar-position {
     position: fixed;
     bottom: 5px;
@@ -52,7 +37,7 @@
     }
 }
 
-.menu-list li:hover {
-    cursor: pointer;
-    transform: scale(1.05);
-}
+    .menu-list li:hover {
+        cursor: pointer;
+        transform: scale(1.05);
+    }
